@@ -1,23 +1,21 @@
-use router::app;
+use controller::routers::app;
 use tracing::info;
 
-mod db;
-mod handlers;
-mod middleware;
-mod web;
-mod router;
+mod model;
+mod controller;
+mod services;
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
-    
+
     let app = app();
+    
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
+        .await
+        .unwrap();
+    info!("listening on {:?}", &listener);
 
-    let listner = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
-    info!("listening on {:?}", listner);
-
-    info!("server was started");
-    axum::serve(listner, app).await.unwrap()
-
-   
+    info!("server start");
+    axum::serve(listener, app).await.unwrap();
 }
