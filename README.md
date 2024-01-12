@@ -1,3 +1,3 @@
-# Web Dev Directory Structure Framework
-This is a directory structure framework for Axum.
-So, we can write application logic without thinking about directory structure deeply initially.
+# Todo application
+This is Todo app by using rust language.  
+The framework is axum.
