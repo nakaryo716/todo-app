@@ -18,5 +18,6 @@ async fn main() {
     info!("listening on {:?}", &listener);
 
     info!("server start");
+    
     axum::serve(listener, app).await.unwrap();
 }
