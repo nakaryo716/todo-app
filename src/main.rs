@@ -1,8 +1,9 @@
-use controller::routers::app;
 use tracing::info;
+use route::app;
 
 mod model;
 mod controller;
+mod route;
 mod services;
 
 #[tokio::main]
