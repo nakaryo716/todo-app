@@ -1,12 +1,12 @@
-use std::env;
 use route::app;
+use std::env;
 
 use crate::model::repository::TodoRepository;
 
-mod model;
 mod controller;
-mod route;
 mod error;
+mod model;
+mod route;
 mod services;
 
 #[tokio::main]
@@ -16,14 +16,14 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     let repository = TodoRepository::new();
-    
+
     let app = app(repository);
-    
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
+
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
         .unwrap();
     tracing::debug!("listening on {:?}", &listener);
 
-    tracing::debug!("server start");   
+    tracing::debug!("server start");
     axum::serve(listener, app).await.unwrap();
 }

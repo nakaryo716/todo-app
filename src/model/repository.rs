@@ -1,5 +1,8 @@
-use std::{sync::{Arc, RwLock}, collections::HashMap};
 use anyhow::Context;
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
 
 use crate::error::RepositoryError;
 
@@ -32,7 +35,7 @@ impl TodoRepositoryForMemory for TodoRepository {
     fn create(&self, payload: CreateTodo) -> Todo {
         let mut store = self.pool.write().unwrap();
 
-        let id = (store.len() as i32) + 1 ;
+        let id = (store.len() as i32) + 1;
         let todo = Todo::new(id, payload.text);
         store.insert(id, todo.clone());
 
@@ -61,7 +64,7 @@ impl TodoRepositoryForMemory for TodoRepository {
         todos
     }
 
-    fn update(&self,id: i32, payload: UpdateTodo) -> anyhow::Result<Todo> {
+    fn update(&self, id: i32, payload: UpdateTodo) -> anyhow::Result<Todo> {
         let mut store = self.pool.write().unwrap();
         let todo = store
             .get(&id)
@@ -89,7 +92,6 @@ impl TodoRepositoryForMemory for TodoRepository {
         store.insert(id, todo.clone());
 
         anyhow::Ok(todo)
-
     }
 
     fn delete(&self, id: i32) -> anyhow::Result<()> {
@@ -99,4 +101,3 @@ impl TodoRepositoryForMemory for TodoRepository {
         anyhow::Ok(())
     }
 }
-
