@@ -1,7 +1,10 @@
 use async_trait::async_trait;
-use axum::{extract::{FromRequest, rejection::JsonRejection, Request}, Json};
+use axum::{
+    extract::{rejection::JsonRejection, FromRequest, Request},
+    Json,
+};
 use hyper::StatusCode;
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use validator::Validate;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,7 +27,7 @@ impl Todo {
 #[derive(Debug, Clone, Deserialize, Validate)]
 pub struct CreateTodo {
     #[validate(length(min = 1, message = "Can not be empty"))]
-    #[validate(length(max = 100,  message = "Over length"))]
+    #[validate(length(max = 100, message = "Over length"))]
     pub text: String,
 }
 
@@ -38,7 +41,6 @@ pub struct UpdateTodo {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ValidatedJson<T>(pub T);
 
-
 #[async_trait]
 impl<T, S> FromRequest<S> for ValidatedJson<T>
 where
@@ -49,7 +51,7 @@ where
     type Rejection = (StatusCode, String);
 
     async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
-        let Json(value) = Json::<T>::from_request(req, state).await.map_err(|err|{
+        let Json(value) = Json::<T>::from_request(req, state).await.map_err(|err| {
             let message = format!("Json parse error: {}", err);
 
             (StatusCode::BAD_REQUEST, message)
@@ -63,4 +65,3 @@ where
         Ok(ValidatedJson(value))
     }
 }
-
