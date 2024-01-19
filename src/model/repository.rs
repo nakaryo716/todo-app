@@ -8,7 +8,7 @@ use crate::error::RepositoryError;
 
 use super::data_type::{CreateTodo, Todo, UpdateTodo};
 
-pub trait TodoRepositoryForMemory: Clone + std::marker::Send + std::marker::Sync + 'static {
+pub trait TodoRepositoryForMemory: Clone + Send + Sync + 'static {
     fn create(&self, payload: CreateTodo) -> Todo;
     fn find(&self, id: i32) -> anyhow::Result<Todo>;
     fn all(&self) -> Vec<Todo>;
