@@ -1,15 +1,8 @@
+use app::model::repository::TodoRepository;
+use app::routes::route;
 use dotenv::dotenv;
-use route::app;
 use sqlx::postgres::PgPoolOptions;
 use std::env;
-
-use crate::model::repository::TodoRepository;
-
-mod controller;
-mod error;
-mod model;
-mod route;
-mod services;
 
 #[tokio::main]
 async fn main() {
@@ -26,7 +19,7 @@ async fn main() {
 
     let repository = TodoRepository::new(pool.clone());
 
-    let app = app(repository);
+    let app = route::app(repository);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::debug!("listening on {:?}", &listener);
