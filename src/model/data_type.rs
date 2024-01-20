@@ -7,21 +7,11 @@ use hyper::StatusCode;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Todo {
     pub id: i32,
     pub text: String,
     pub completed: bool,
-}
-
-impl Todo {
-    pub fn new(id: i32, text: String) -> Self {
-        Self {
-            id,
-            text,
-            completed: false,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Deserialize, Validate)]

@@ -1,102 +1,127 @@
-use anyhow::Context;
-use std::{
-    collections::HashMap,
-    sync::{Arc, RwLock},
-};
-
 use crate::error::RepositoryError;
+use anyhow::Context;
+use async_trait::async_trait;
+use sqlx::PgPool;
 
 use super::data_type::{CreateTodo, Todo, UpdateTodo};
 
+#[async_trait]
 pub trait TodoRepositoryForMemory: Clone + Send + Sync + 'static {
-    fn create(&self, payload: CreateTodo) -> Todo;
-    fn find(&self, id: i32) -> anyhow::Result<Todo>;
-    fn all(&self) -> Vec<Todo>;
-    fn update(&self, id: i32, payload: UpdateTodo) -> anyhow::Result<Todo>;
-    fn delete(&self, id: i32) -> anyhow::Result<()>;
+    async fn create(&self, payload: CreateTodo) -> anyhow::Result<Todo>;
+    async fn find(&self, id: i32) -> Result<Todo, RepositoryError>;
+    async fn all(&self) -> anyhow::Result<Vec<Todo>>;
+    async fn update(&self, id: i32, payload: UpdateTodo) -> anyhow::Result<Todo>;
+    async fn delete(&self, id: i32) -> anyhow::Result<()>;
 }
-
-type TodoData = HashMap<i32, Todo>;
 
 #[derive(Debug, Clone)]
 pub struct TodoRepository {
-    pool: Arc<RwLock<TodoData>>,
+    pool: PgPool,
 }
 
 impl TodoRepository {
-    pub fn new() -> Self {
-        TodoRepository {
-            pool: Arc::default(),
-        }
+    pub fn new(pool: PgPool) -> Self {
+        TodoRepository { pool }
     }
 }
 
+#[async_trait]
 impl TodoRepositoryForMemory for TodoRepository {
-    fn create(&self, payload: CreateTodo) -> Todo {
-        let mut store = self.pool.write().unwrap();
-
-        let id = (store.len() as i32) + 1;
-        let todo = Todo::new(id, payload.text);
-        store.insert(id, todo.clone());
-
-        todo
-    }
-
-    fn find(&self, id: i32) -> anyhow::Result<Todo> {
-        let store = self.pool.read().unwrap();
-
-        let todo = store
-            .get(&id)
-            .map(|m| m.clone())
-            .context(RepositoryError::NotFound(id))?;
+    async fn create(&self, payload: CreateTodo) -> anyhow::Result<Todo> {
+        let todo = sqlx::query_as::<_, Todo>(
+            r#"
+INSERT INTO todos (text, completed)
+VALUES ($1, false)
+RETURNING *
+            "#,
+        )
+        .bind(payload.text.clone())
+        .fetch_one(&self.pool)
+        .await
+        .context(RepositoryError::Unexpected)?;
 
         anyhow::Ok(todo)
     }
 
-    fn all(&self) -> Vec<Todo> {
-        let store = self.pool.read().unwrap();
-        let mut todos = Vec::new();
+    async fn find(&self, id: i32) -> Result<Todo, RepositoryError> {
+        let todo = sqlx::query_as::<_, Todo>(
+            r#"
+SELECT * FROM todos WHERE id = $1
+            "#,
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|err| match err {
+            sqlx::Error::RowNotFound => RepositoryError::NotFound,
+            _ => RepositoryError::Unexpected,
+        })?;
 
-        for (_id, value) in store.clone().into_iter() {
-            todos.push(value);
-        }
-
-        todos
+        Ok(todo)
     }
 
-    fn update(&self, id: i32, payload: UpdateTodo) -> anyhow::Result<Todo> {
-        let mut store = self.pool.write().unwrap();
-        let todo = store
-            .get(&id)
-            .map(|todo| todo.clone())
-            .context(RepositoryError::NotFound(id))?;
+    async fn all(&self) -> anyhow::Result<Vec<Todo>> {
+        let todos = sqlx::query_as::<_, Todo>(
+            r#"
+SELECT * FROM todos
+ORDER BY id DESC;      
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context(RepositoryError::Unexpected)?;
+
+        anyhow::Ok(todos)
+    }
+
+    async fn update(&self, id: i32, payload: UpdateTodo) -> anyhow::Result<Todo> {
+        let old_todo = self.find(id).await?;
 
         let text = if payload.text.is_none() {
-            todo.text
+            old_todo.text
         } else {
             payload.text.unwrap()
         };
 
         let completed = if payload.completed.is_none() {
-            todo.completed
+            old_todo.completed
         } else {
             payload.completed.unwrap()
         };
 
-        let todo = Todo {
-            id,
-            text,
-            completed,
-        };
-
-        store.insert(id, todo.clone());
+        let todo = sqlx::query_as::<_, Todo>(
+            r#"
+UPDATE todos SET text = $1, completed = $2
+WHERE id = $3
+RETURNING *       
+        "#,
+        )
+        .bind(text)
+        .bind(completed)
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|err| match err {
+            sqlx::Error::RowNotFound => RepositoryError::NotFound,
+            _ => RepositoryError::Unexpected,
+        })?;
 
         anyhow::Ok(todo)
     }
 
-    fn delete(&self, id: i32) -> anyhow::Result<()> {
-        let mut store = self.pool.write().unwrap();
-        store.remove(&id).context(RepositoryError::NotFound(id))?;
+    async fn delete(&self, id: i32) -> anyhow::Result<()> {
+        let _todo = sqlx::query(
+            r#"
+DELETE FROM todos WHERE id = $1
+            "#,
+        )
+        .bind(id)
+        .execute(&self.pool)
+        .await
+        .map_err(|err| match err {
+            sqlx::Error::RowNotFound => RepositoryError::NotFound,
+            _ => RepositoryError::Unexpected,
+        })?;
 
         anyhow::Ok(())
     }

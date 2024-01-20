@@ -1,4 +1,6 @@
+use dotenv::dotenv;
 use route::app;
+use sqlx::postgres::PgPoolOptions;
 use std::env;
 
 use crate::model::repository::TodoRepository;
@@ -15,7 +17,14 @@ async fn main() {
     env::set_var("RUST_LOG", log_level);
     tracing_subscriber::fmt::init();
 
-    let repository = TodoRepository::new();
+    dotenv().ok();
+    let database_url = env::var("DATABASE_URL").expect("notfound database url");
+    let pool = PgPoolOptions::new()
+        .connect(&database_url)
+        .await
+        .expect("cannot connect database");
+
+    let repository = TodoRepository::new(pool.clone());
 
     let app = app(repository);
 

@@ -1,6 +1,9 @@
-use crate::model::{
-    data_type::{CreateTodo, UpdateTodo, ValidatedJson},
-    repository::TodoRepositoryForMemory,
+use crate::{
+    error::RepositoryError,
+    model::{
+        data_type::{CreateTodo, UpdateTodo, ValidatedJson},
+        repository::TodoRepositoryForMemory,
+    },
 };
 use axum::{
     extract::{Path, State},
@@ -17,27 +20,33 @@ pub async fn hello() -> impl IntoResponse {
 pub async fn create_todo<T: TodoRepositoryForMemory>(
     State(repository): State<Arc<T>>,
     ValidatedJson(payload): ValidatedJson<CreateTodo>,
-) -> impl IntoResponse {
-    let todo = repository.create(payload);
+) -> Result<impl IntoResponse, StatusCode> {
+    let todo = repository
+        .create(payload)
+        .await
+        .or(Err(StatusCode::INTERNAL_SERVER_ERROR))?;
 
-    (StatusCode::CREATED, Json(todo))
+    Ok((StatusCode::CREATED, Json(todo)))
 }
 
 pub async fn find_todo<T: TodoRepositoryForMemory>(
     State(repository): State<Arc<T>>,
     Path(id): Path<i32>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let todo = repository.find(id).or(Err(StatusCode::NOT_FOUND))?;
+    let todo = repository.find(id).await.map_err(|err| match err {
+        RepositoryError::NotFound => StatusCode::NOT_FOUND,
+        RepositoryError::Unexpected => StatusCode::INTERNAL_SERVER_ERROR,
+    })?;
 
     Ok((StatusCode::OK, Json(todo)))
 }
 
 pub async fn all_todo<T: TodoRepositoryForMemory>(
     State(repository): State<Arc<T>>,
-) -> impl IntoResponse {
-    let todo = repository.all();
+) -> Result<impl IntoResponse, StatusCode> {
+    let todo = repository.all().await.or(Err(StatusCode::NOT_FOUND))?;
 
-    (StatusCode::OK, Json(todo))
+    Ok((StatusCode::OK, Json(todo)))
 }
 
 pub async fn update_todo<T: TodoRepositoryForMemory>(
@@ -47,6 +56,7 @@ pub async fn update_todo<T: TodoRepositoryForMemory>(
 ) -> Result<impl IntoResponse, StatusCode> {
     let todo = repository
         .update(id, payload)
+        .await
         .or(Err(StatusCode::NOT_FOUND))?;
 
     Ok((StatusCode::OK, Json(todo)))
@@ -56,7 +66,7 @@ pub async fn delete_todo<T: TodoRepositoryForMemory>(
     State(repository): State<Arc<T>>,
     Path(id): Path<i32>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    repository.delete(id).or(Err(StatusCode::NOT_FOUND))?;
+    repository.delete(id).await.or(Err(StatusCode::NOT_FOUND))?;
 
     Ok(StatusCode::NO_CONTENT)
 }
