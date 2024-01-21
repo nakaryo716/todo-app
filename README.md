@@ -1,4 +1,4 @@
-# What is this?
+# Todo app
 This is Todo api by using rust language.  
 The framework that this app using is Axum.
 
