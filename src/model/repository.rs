@@ -1,5 +1,4 @@
 use crate::error::RepositoryError;
-use anyhow::Context;
 use async_trait::async_trait;
 use sqlx::PgPool;
 
@@ -7,11 +6,11 @@ use super::data_type::{CreateTodo, Todo, UpdateTodo};
 
 #[async_trait]
 pub trait TodoRepositoryForMemory: Clone + Send + Sync + 'static {
-    async fn create(&self, payload: CreateTodo) -> anyhow::Result<Todo>;
+    async fn create(&self, payload: CreateTodo) -> Result<Todo, RepositoryError>;
     async fn find(&self, id: i32) -> Result<Todo, RepositoryError>;
-    async fn all(&self) -> anyhow::Result<Vec<Todo>>;
-    async fn update(&self, id: i32, payload: UpdateTodo) -> anyhow::Result<Todo>;
-    async fn delete(&self, id: i32) -> anyhow::Result<()>;
+    async fn all(&self) -> Result<Vec<Todo>, RepositoryError>;
+    async fn update(&self, id: i32, payload: UpdateTodo) -> Result<Todo, RepositoryError>;
+    async fn delete(&self, id: i32) -> Result<(), RepositoryError>;
 }
 
 #[derive(Debug, Clone)]
@@ -27,7 +26,7 @@ impl TodoRepository {
 
 #[async_trait]
 impl TodoRepositoryForMemory for TodoRepository {
-    async fn create(&self, payload: CreateTodo) -> anyhow::Result<Todo> {
+    async fn create(&self, payload: CreateTodo) -> Result<Todo, RepositoryError> {
         let todo = sqlx::query_as::<_, Todo>(
             r#"
 INSERT INTO todos (text, completed)
@@ -38,9 +37,14 @@ RETURNING *
         .bind(payload.text.clone())
         .fetch_one(&self.pool)
         .await
-        .context(RepositoryError::Unexpected)?;
+        .map_err(|err| {
+            match err {
+                sqlx::Error::Protocol(text) => RepositoryError::DatabaseError(text),
+                _ => RepositoryError::Unexpected,
+            }
+        })?;
 
-        anyhow::Ok(todo)
+        Ok(todo)
     }
 
     async fn find(&self, id: i32) -> Result<Todo, RepositoryError> {
@@ -60,7 +64,7 @@ SELECT * FROM todos WHERE id = $1
         Ok(todo)
     }
 
-    async fn all(&self) -> anyhow::Result<Vec<Todo>> {
+    async fn all(&self) -> anyhow::Result<Vec<Todo>, RepositoryError> {
         let todos = sqlx::query_as::<_, Todo>(
             r#"
 SELECT * FROM todos
@@ -69,12 +73,18 @@ ORDER BY id DESC;
         )
         .fetch_all(&self.pool)
         .await
-        .context(RepositoryError::Unexpected)?;
+        .map_err(|err| {
+            match err {
+                sqlx::Error::RowNotFound => RepositoryError::NotFound,
+                sqlx::Error::Protocol(text) => RepositoryError::DatabaseError(text),
+                _ => RepositoryError::Unexpected,
+            }
+        })?;
 
-        anyhow::Ok(todos)
+        Ok(todos)
     }
 
-    async fn update(&self, id: i32, payload: UpdateTodo) -> anyhow::Result<Todo> {
+    async fn update(&self, id: i32, payload: UpdateTodo) -> Result<Todo, RepositoryError> {
         let old_todo = self.find(id).await?;
 
         let text = if payload.text.is_none() {
@@ -103,13 +113,14 @@ RETURNING *
         .await
         .map_err(|err| match err {
             sqlx::Error::RowNotFound => RepositoryError::NotFound,
+            sqlx::Error::Protocol(text) => RepositoryError::DatabaseError(text),
             _ => RepositoryError::Unexpected,
         })?;
 
-        anyhow::Ok(todo)
+        Ok(todo)
     }
 
-    async fn delete(&self, id: i32) -> anyhow::Result<()> {
+    async fn delete(&self, id: i32) -> Result<(), RepositoryError> {
         let _todo = sqlx::query(
             r#"
 DELETE FROM todos WHERE id = $1
@@ -120,9 +131,10 @@ DELETE FROM todos WHERE id = $1
         .await
         .map_err(|err| match err {
             sqlx::Error::RowNotFound => RepositoryError::NotFound,
+            sqlx::Error::Protocol(text) => RepositoryError::DatabaseError(text),
             _ => RepositoryError::Unexpected,
         })?;
 
-        anyhow::Ok(())
+        Ok(())
     }
 }

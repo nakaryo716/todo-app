@@ -2,8 +2,10 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum RepositoryError {
-    #[error("Unecpected error")]
-    Unexpected,
     #[error("NotFound")]
     NotFound,
+    #[error("Unexpected error")]
+    Unexpected,
+    #[error("Database error: {0}")]
+    DatabaseError(String),
 }
