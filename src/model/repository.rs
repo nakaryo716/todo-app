@@ -37,11 +37,9 @@ RETURNING *
         .bind(payload.text.clone())
         .fetch_one(&self.pool)
         .await
-        .map_err(|err| {
-            match err {
-                sqlx::Error::Protocol(text) => RepositoryError::DatabaseError(text),
-                _ => RepositoryError::Unexpected,
-            }
+        .map_err(|err| match err {
+            sqlx::Error::Protocol(text) => RepositoryError::DatabaseError(text),
+            _ => RepositoryError::Unexpected,
         })?;
 
         Ok(todo)
@@ -73,12 +71,10 @@ ORDER BY id DESC;
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|err| {
-            match err {
-                sqlx::Error::RowNotFound => RepositoryError::NotFound,
-                sqlx::Error::Protocol(text) => RepositoryError::DatabaseError(text),
-                _ => RepositoryError::Unexpected,
-            }
+        .map_err(|err| match err {
+            sqlx::Error::RowNotFound => RepositoryError::NotFound,
+            sqlx::Error::Protocol(text) => RepositoryError::DatabaseError(text),
+            _ => RepositoryError::Unexpected,
         })?;
 
         Ok(todos)
@@ -114,7 +110,7 @@ RETURNING *
         .map_err(|err| match err {
             sqlx::Error::RowNotFound => RepositoryError::NotFound,
             sqlx::Error::Protocol(text) => RepositoryError::DatabaseError(text),
-            _ => RepositoryError::Unexpected,
+            _ => RepositoryError::NotFound,
         })?;
 
         Ok(todo)
