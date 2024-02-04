@@ -1,23 +1,22 @@
-import { FC, useState } from "react"
-import { NewTodoPayload } from "../types/todo"
-import { Box, Grid, Paper, TextField } from "@mui/material"
-import { Button } from "@mui/base"
+import {NewTodoPayload} from "../types/todo";
+import {FC, useState} from "react";
+import {Box, Button, Grid, Paper, TextField} from "@mui/material";
 
-type Prosp = {
+type Props = {
     onSubmit: (newTodo: NewTodoPayload) => void
 }
 
-const TodoForm: FC<Prosp> = ({ onSubmit }) => {
-    const [editText, setEditText] = useState('')
+const TodoForm: FC<Props> = ({onSubmit}) => {
+    const [editText, setEditText] = useState('');
 
     const addTodoHandler = async () => {
         if (!editText) return
 
         onSubmit({
             text: editText,
-        })
+        });
 
-        setEditText('')
+        setEditText('');
     }
 
     return (
@@ -26,24 +25,23 @@ const TodoForm: FC<Prosp> = ({ onSubmit }) => {
                 <Grid container rowSpacing={2} columnSpacing={5}>
                     <Grid item xs={12}>
                         <TextField
-                            label="new todo text"
-                            variant="filled"
+                            label={"new todo text"}
+                            variant={"filled"}
                             value={editText}
                             onChange={(e) => setEditText(e.target.value)}
                             fullWidth
                         />
                     </Grid>
-                    <Grid item xs={9} />
+                    <Grid item xs={9}/>
                     <Grid item xs={3}>
-                        <Button onClick={addTodoHandler}>
-                            add todo
+                        <Button onClick={addTodoHandler} fullWidth>
+                            add Todo
                         </Button>
                     </Grid>
                 </Grid>
             </Box>
         </Paper>
     )
-
 }
 
 export default TodoForm
