@@ -3,22 +3,18 @@ import {Box, createTheme, Stack, ThemeProvider, Typography} from "@mui/material"
 import {NewTodoPayload, Todo} from "./types/todo";
 import TodoForm from "./components/TodoForm.tsx";
 import TodoList from "./components/TodoList.tsx";
+import {addTodoItem} from "./lib/api/todo.ts";
 
 const TodoApp: FC = () => {
     const [todos, setTodos] = useState<Todo[]>([]);
-    const createId = () => todos.length + 1
+
 
     const onSubmit = async (payload: NewTodoPayload) => {
         if (!payload) return
 
-        setTodos((prev) => [
-            {
-                id: createId(),
-                text: payload.text,
-                completed: false,
-            },
-            ...prev,
-        ])
+       const newTodo = await addTodoItem(payload);
+
+        setTodos((prev) => [newTodo, ...prev]);
     }
 
     const onUpdate = (updateTodo: Todo) => {
