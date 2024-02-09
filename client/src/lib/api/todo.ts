@@ -1,7 +1,7 @@
 import type {NewTodoPayload, Todo} from "../../types/todo";
 
 export const addTodoItem = async (payload: NewTodoPayload) => {
-    const  res = await fetch('http://localhost:8080/todos', {
+    const  res = await fetch('http://localhost:3000/todo', {
         method: 'post',
         headers: {
             'Content-Type': 'application/json',
