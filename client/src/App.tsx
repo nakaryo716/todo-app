@@ -1,9 +1,9 @@
-import {FC, useState} from "react";
+import {FC, useEffect, useState} from "react";
 import {Box, createTheme, Stack, ThemeProvider, Typography} from "@mui/material";
 import {NewTodoPayload, Todo} from "./types/todo";
 import TodoForm from "./components/TodoForm.tsx";
 import TodoList from "./components/TodoList.tsx";
-import {addTodoItem} from "./lib/api/todo.ts";
+import {addTodoItem, getTodoItem, updateTodoItem} from "./lib/api/todo.ts";
 
 const TodoApp: FC = () => {
     const [todos, setTodos] = useState<Todo[]>([]);
@@ -12,24 +12,26 @@ const TodoApp: FC = () => {
     const onSubmit = async (payload: NewTodoPayload) => {
         if (!payload) return
 
-       const newTodo = await addTodoItem(payload);
+        await addTodoItem(payload);
+        const todos = await getTodoItem();
 
-        setTodos((prev) => [newTodo, ...prev]);
+        setTodos(todos);
     }
 
-    const onUpdate = (updateTodo: Todo) => {
-        setTodos(
-            todos.map((todo) => {
-                if (todo.id === updateTodo.id) {
-                    return {
-                        ...todo,
-                        ...updateTodo,
-                    }
-                }
-                return todo
-            })
-        )
+   const onUpdate = async (updateTodo: Todo) => {
+        await updateTodoItem(updateTodo);
+        const todos = await getTodoItem(); 
+
+        setTodos(todos);
     }
+
+    useEffect(() => {
+        (async () => {
+            const todos = await getTodoItem()
+            setTodos(todos)
+        })()
+    }, [])
+
     return (
         <>
             <Box
@@ -60,7 +62,7 @@ const TodoApp: FC = () => {
                 <Box maxWidth={700} width={"100%"}>
                     <Stack spacing={5}>
                         <TodoForm onSubmit={onSubmit} />
-                        <TodoList todos={todos} onUpdate={onUpdate} />
+                        <TodoList todos={todos} onUpdate={onUpdate} onDelete={() => {}} />
                     </Stack>
                 </Box>
             </Box>
