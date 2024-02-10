@@ -26,7 +26,7 @@ pub async fn create_todo<T: TodoRepositoryForMemory>(
         RepositoryError::Unexpected => StatusCode::SERVICE_UNAVAILABLE,
         RepositoryError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
     })?;
-
+    
     Ok((StatusCode::CREATED, Json(todo)))
 }
 

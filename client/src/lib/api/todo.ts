@@ -2,7 +2,7 @@ import type {NewTodoPayload, Todo} from "../../types/todo";
 
 export const addTodoItem = async (payload: NewTodoPayload) => {
     const  res = await fetch('http://localhost:3000/todo', {
-        method: 'post',
+        method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
@@ -45,4 +45,14 @@ export const updateTodoItem = async (todo: Todo) => {
 
     const json: Todo = await res.json();
     return json;
+}
+
+export const deleteTodoItem = async (id: number) => {
+    const res = await fetch(`http://localhost:3000/todo/${id}`,{
+        method: 'DELETE',
+    });
+
+    if(!res.ok) {
+        throw new Error('delete todo request failed');
+    }
 }

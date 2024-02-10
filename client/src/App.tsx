@@ -3,7 +3,7 @@ import {Box, createTheme, Stack, ThemeProvider, Typography} from "@mui/material"
 import {NewTodoPayload, Todo} from "./types/todo";
 import TodoForm from "./components/TodoForm.tsx";
 import TodoList from "./components/TodoList.tsx";
-import {addTodoItem, getTodoItem, updateTodoItem} from "./lib/api/todo.ts";
+import {addTodoItem, deleteTodoItem, getTodoItem, updateTodoItem} from "./lib/api/todo.ts";
 
 const TodoApp: FC = () => {
     const [todos, setTodos] = useState<Todo[]>([]);
@@ -13,15 +13,22 @@ const TodoApp: FC = () => {
         if (!payload) return
 
         await addTodoItem(payload);
+        
         const todos = await getTodoItem();
-
         setTodos(todos);
     }
 
    const onUpdate = async (updateTodo: Todo) => {
         await updateTodoItem(updateTodo);
-        const todos = await getTodoItem(); 
 
+        const todos = await getTodoItem(); 
+        setTodos(todos);
+    }
+
+    const onDelete = async (id: number) => {
+        await deleteTodoItem(id);
+
+        const todos = await getTodoItem();
         setTodos(todos);
     }
 
@@ -62,7 +69,7 @@ const TodoApp: FC = () => {
                 <Box maxWidth={700} width={"100%"}>
                     <Stack spacing={5}>
                         <TodoForm onSubmit={onSubmit} />
-                        <TodoList todos={todos} onUpdate={onUpdate} onDelete={() => {}} />
+                        <TodoList todos={todos} onUpdate={onUpdate} onDelete={onDelete} />
                     </Stack>
                 </Box>
             </Box>
